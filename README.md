@@ -4,7 +4,10 @@ Very much a work in progress.  Really just in a repo for safe keeping.  The idea
 Usage:
     ruby engineering_data.rb "tool" "lateralus"
 
-TODO:
-  * Better narrowing when provided mulitple release options. Perhaps by year/release type (remaster, etc)
-  * Better identifying if a search result is actually the album being queried for
-  * Probably a lot more...
+## Requirements
+1. [Discogs gem](https://github.com/buntine/discogs.git)
+
+## TODO:
+*Better narrowing when provided mulitple release options. Perhaps by year/release type (remaster, etc)
+*Better identifying if a search result is *actually the album* being queried for
+*Add sources other than Discogs.com
