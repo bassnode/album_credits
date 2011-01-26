@@ -8,6 +8,5 @@ Usage:
 1. [Discogs gem](http://github.com/buntine/discogs)
 
 ## TODO:
-* Better narrowing when provided mulitple release options. Perhaps by year/release type (remaster, etc)
 * Better identifying if a search result is *actually the album* being queried for
 * Add sources other than Discogs.com
