@@ -14,7 +14,7 @@ COLORS = {
   :blue => "\e[34m"
 }
 
-def color_puts(text, color, bold=false)
+def color_puts(text, color=:white, bold=false)
   embolden = bold ? COLORS[:bold] : ''
   puts "#{embolden}#{COLORS[color]}#{text}#{COLORS[:clear]}"
 end
@@ -101,7 +101,7 @@ def display_release(release, engineers, options={})
     # Print the first 100 releases in the engineer's discography
     if show_discography && !(artist = discogs.get_artist(CGI.escape(engineer.name))).nil?
       color_puts "#{artist.aliases} #{artist.aliases} #{artist.namevariations}", color
-      color_puts "#{artist.releases.size} releases in discography"
+      color_puts "#{artist.releases.size} releases in discography", color
       artist.releases.slice(0,99).each do |disk|
         color_puts "\t* #{disk.year} #{disk.title} [#{disk.label}]", color
       end
