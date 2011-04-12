@@ -2,7 +2,7 @@
 
 # TEMP
 require 'rubygems'
-require 'bundler/setup'
+require 'bundler'
 require 'ruby-debug'
 require 'album_credits'
 
