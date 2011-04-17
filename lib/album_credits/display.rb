@@ -16,6 +16,12 @@ module AlbumCredits
     @default_color = :white
     attr_accessor :default_color
 
+    # Prints the text in color
+    #
+    # @param [String] the text to print
+    # @param [Hash] opts
+    # @options opts [Boolean] :bold
+    # @options opts [Symbol] :color (default is .default_color)
     def cp(text, opts={})
       embolden = opts[:bold] ? COLORS[:bold] : ''
       color = opts[:color] || @default_color
@@ -53,14 +59,16 @@ module AlbumCredits
       cp "Engineers:", :color => :yellow
       engineers.each do |engineer|
         next if displayed.include? engineer.name
-        cp "#{engineer.role} #{engineer.name}", :bold => true
+        cp "#{engineer.role} #{engineer.name}", :bold => true, :color => :red
 
         # Print the engineer's discography
         if show_discography && !(artist = discogs.get_artist(CGI.escape(engineer.name))).nil?
           aka = artist.aliases || []
           aka << artist.namevariations || []
+
           cp "AKA: #{aka.flatten.uniq.sort.join(', ')}"
-          cp "#{artist.releases.size} releases in discography"
+          cp "#{artist.releases.size} releases in discography", :color => :yellow
+
           # Don't show discog for assistants
           unless engineer.role =~ /assisted|assistant|additional/i
             artist.releases.group_by{ |disk| disk.artist }.sort_by{ |artist, albums| artist }.each do |artist, albums|

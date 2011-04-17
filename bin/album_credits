@@ -1,18 +1,20 @@
 #!/usr/bin/env ruby
+$:.unshift File.join(File.dirname(__FILE__), '..', 'lib')
 
-# TEMP
-require 'rubygems'
-require 'bundler'
-require 'ruby-debug'
 require 'album_credits'
 
+# TODO Shove this all in a CLI class or some such.
 artist = ARGV[0]
 album  = ARGV[1]
 year   = ARGV[2]
 ac = AlbumCredits::Finder.new
 
-releases = ac.find_releases(artist, album, year)
-raise "No releases" if releases.empty?
+begin
+  releases = ac.find_releases(artist, album, year)
+rescue Exception => e
+  puts e.message
+  exit
+end
 puts "Found #{releases.size} releases"
 
 sorted_releases = releases.inject([]) do |rel_array, release|
@@ -27,6 +29,7 @@ raise "No engineering data though :/" if sorted_releases.empty?
 best_guess = sorted_releases.shift
 ac.display_release(best_guess.first, best_guess.last, :color => :green, :show_discography => true)
 
-sorted_releases.each do |release, engineers|
-  ac.display_release(release, engineers)
-end
+
+# sorted_releases.each do |release, engineers|
+  # ac.display_release(release, engineers)
+# end

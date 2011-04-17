@@ -1,5 +1,5 @@
 # -*- encoding: utf-8 -*-
-$:.push File.expand_path("../lib", __FILE__)
+$:.unshift File.join(File.dirname(__FILE__), 'lib')
 require "album_credits/version"
 
 Gem::Specification.new do |s|
@@ -19,6 +19,6 @@ Gem::Specification.new do |s|
   s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
   s.require_paths = ["lib"]
 
-  s.add_dependency "ruby-debug"
   s.add_dependency "bassnode-discogs"
+  s.add_development_dependency "ruby-debug"
 end
