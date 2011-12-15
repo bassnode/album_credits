@@ -1,5 +1,4 @@
 require 'rubygems'
-#require 'ap'
 require 'discogs'
 require 'cgi'
 require 'ruby-debug'
