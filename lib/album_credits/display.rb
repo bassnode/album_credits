@@ -39,12 +39,21 @@ module AlbumCredits
       @default_color = opts.delete(:color) || :white
 
       cp "="*40
-      cp "#{release.title} #{release.released} ID: #{release.id}"
+      cp "#{release.title} #{release.released}"
+      cp release.uri
       cp "#{release.tracklist.size} songs"
       cp image_uri_for_release(release)
       cp release.notes
 
       display_engineer_data(engineers, opts)
+    end
+
+    def get_artist_discog(artist)
+      begin
+        discogs.get_artists_releases(artist.id, per_page: 25, page: 1)
+      rescue Exception => e
+        puts e
+      end
     end
 
     # TODO: Put logical engineer sorting
@@ -62,16 +71,21 @@ module AlbumCredits
         cp "#{engineer.role} #{engineer.name}", :bold => true, :color => :red
 
         # Print the engineer's discography
-        if show_discography && !(artist = discogs.get_artist(CGI.escape(engineer.name))).nil?
-          aka = artist.aliases || []
-          aka << artist.namevariations || []
+        engineer_discog = get_artist_discog(engineer)
+        engineer = discogs.get_artist(engineer.id)
+        if show_discography && !engineer_discog.nil?
+          aka = engineer.namevariations || []
+          aka << engineer.aliases.map(&:name) unless engineer.aliases.nil?
+          if !(aliases = aka.flatten.uniq.sort).empty?
+            cp "AKA: #{aliases.join(', ')}"
+          end
+          cp "#{engineer_discog.releases.size} releases in discography", :color => :yellow
 
-          cp "AKA: #{aka.flatten.uniq.sort.join(', ')}"
-          cp "#{artist.releases.size} releases in discography", :color => :yellow
+          cp engineer.uri
 
           # Don't show discog for assistants
           unless engineer.role =~ /assisted|assistant|additional/i
-            artist.releases.group_by{ |disk| disk.artist }.sort_by{ |artist, albums| artist }.each do |artist, albums|
+            engineer_discog.releases.group_by{ |disk| disk.artist }.sort_by{ |artist, albums| artist }.each do |artist, albums|
               cp artist.to_s + " (#{albums.size} total)", :bold => true, :color => :blue
               # Print the oldest version of this album
               albums.group_by{ |a| a.title }.each do |title, albums|

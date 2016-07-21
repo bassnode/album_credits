@@ -5,8 +5,8 @@ module AlbumCredits
 
     attr_reader :discogs
 
-    def initialize(api_key="bff9085fc7")
-      @discogs = Discogs::Wrapper.new(api_key)
+    def initialize(api_key="vTVvYBauSDUjTGNmVGdjqEavQHRWdkhtWerSqJul")
+      @discogs = Discogs::Wrapper.new("album_credits", user_token: api_key)
     end
 
     def parse_discogs_id(search_result)
@@ -30,36 +30,35 @@ module AlbumCredits
       begin
         discogs.search(CGI.escape(search_string), :type => 'releases')
       rescue  Discogs::UnknownResource => e
-        debug "Nothing found for #{search_string}"
+        debug "Nothing found for #{search_string} #{e}"
       end
     end
 
-    def find_releases(artist, album, year=nil)
+    def find_releases(artist, album)
 
       releases = []
+      possibilities = discogs.search(album, type: 'release', artist: artist, format: 'album')
 
-      [nil, 'CD', 'HDCD', 'vinyl'].each do |format|
-
-        possibilities = search(album, :artist => artist, :year => year, :format => format)
-
-        if possibilities && possibilities.searchresults.size > 0
-          possibilities.searchresults.each do |found_album|
-            release = discogs.get_release(parse_discogs_id(found_album))
-            # Make sure the album is actually what we think it is and that it
-            # is in an Accepted state (as per Discogs).
-            if release.title =~ /#{album}/i && release.status == 'Accepted'
-              releases << release
-            else
-              debug "unacceptable: #{release.title} #{release.status}"
-            end
+      if possibilities.pagination.items > 0
+        possibilities.results.each do |found_album|
+          begin
+            release = discogs.get_release(found_album.id)
+          rescue Exception => e
+            debug "Failed to find release id #{found_album.id}: #{e}"
+            next
           end
-        else
-          debug "no results for #{artist} #{album} #{year} #{format}"
+          # Make sure the album is actually in an Accepted state (as per Discogs).
+          if release.status == 'Accepted'
+            releases << release
+          else
+            debug "unacceptable: #{release.title} #{release.status}"
+          end
         end
-
-
-        raise AlbumCredits::NoReleasesFound.new(artist, album, year) if releases.empty?
+      else
+        debug "no results for #{artist} #{album} #{year} #{format}"
       end
+
+      raise AlbumCredits::NoReleasesFound.new(artist, album, year) if releases.empty?
 
       # Sometimes Discogs returns duplicate releases so
       # filter out any duplicates based on id.

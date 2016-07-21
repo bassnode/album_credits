@@ -1,7 +1,7 @@
 require 'rubygems'
 require 'discogs'
-require 'cgi'
-require 'ruby-debug'
+require 'awesome_print'
+
 COLORS = {
   :clear => "\e[0m",
   :bold => "\e[1m",
@@ -18,39 +18,33 @@ def color_puts(text, color=:white, bold=false)
   puts "#{embolden}#{COLORS[color]}#{text}#{COLORS[:clear]}"
 end
 
-def parse_discogs_id(search_result)
-  search_result.uri.split('/').last
-end
-
 def discogs
   return @discogs if @discogs
-  @discogs = Discogs::Wrapper.new("bff9085fc7")
+  @discogs = Discogs::Wrapper.new("album_credits", user_token: "vTVvYBauSDUjTGNmVGdjqEavQHRWdkhtWerSqJul")
 end
 
-def find_releases(artist, album, year=nil)
+def find_releases(artist, album)
   releases = []
-  [nil, 'CD', 'HDCD', 'vinyl'].each do |format|
-    format = " AND format:#{format}" if format
-    query = CGI.escape("#{album} AND artist:#{artist}#{format}")
-    possibilities = discogs.search(query, 'releases')
-    if possibilities.searchresults.size > 0
-      possibilities.searchresults.each do |found_album|
-        # puts "trying #{found_album.inspect}"
-        release = discogs.get_release(parse_discogs_id(found_album))
-        # Make sure the album is actually what we think it is and that it
-        # is in an Accepted state (as per Discogs).
-        if release.title =~ /#{album}/i && release.status == 'Accepted'
-          releases << release
-        end
+  possibilities = discogs.search(album, type: 'release', artist: artist)
+  if possibilities.pagination.items > 0
+    puts "Found #{possibilities.pagination.items} to look through"
+    possibilities.results.each do |found_album|
+      begin
+        release = discogs.get_release(found_album.id)
+      rescue Exception => e
+        puts "Failed to find release id #{found_album.id}: #{e}"
+        next
       end
-    else
-      # puts "no results for #{query}"
+      # Make sure the album is actually is in an Accepted state (as per Discogs).
+      if release.status == 'Accepted'
+        releases << release
+      else
+        puts "#{release.artists.first.name} - #{release.title} Status: #{release.status}"
+      end
     end
+  else
+    puts "no results for #{artist} #{album}"
   end
-
-  # Could put this later but still trying to figure out if we want to narrow
-  # by year if it removes all potential results.
-  releases.reject!{ |r| r.released.to_s.split('-').first.to_s != year } if year
 
   # Only return unique releases
   seen = {}
@@ -62,9 +56,7 @@ def find_releases(artist, album, year=nil)
     uniq
   end
 
-  # Only return with nil release date filter unless it filters out everything.
-  pristine_releases = uniq_releases.reject{|release| release.released.nil?}
-  pristine_releases.size < uniq_releases.size ? pristine_releases : uniq_releases
+  uniq_releases
 end
 
 def engineers_for_release(release)
@@ -73,9 +65,12 @@ def engineers_for_release(release)
   end
 end
 
-def discography_for_artist(artist)
-  debugger
-  discogs.get_artist(CGI.escape(artist)) rescue []
+def get_artist_discog(artist)
+  begin
+    discogs.get_artists_releases(artist.id, per_page: 25, page: 1)
+  rescue Exception => e
+    puts e
+  end
 end
 
 def image_uri_for_release(release)
@@ -88,9 +83,10 @@ end
 def display_release(release, engineers, options={})
   color = options.delete(:color) || :white
   show_discography = options[:show_discography] == true
-
+  label = release.labels.empty? ? "" : "[#{release.labels.first.name}]"
   color_puts "="*40, color
-  color_puts "#{release.title} #{release.released} ID: #{release.id}", color
+  color_puts "#{release.artists.first.name} - #{release.title} #{release.released} #{label}", color
+  color_puts release.uri, color
   color_puts "#{release.tracklist.size} songs", color
   color_puts image_uri_for_release(release), color
   color_puts release.notes, color
@@ -98,11 +94,12 @@ def display_release(release, engineers, options={})
   engineers.each do |engineer|
     color_puts "#{engineer.role} #{engineer.name}", color, true
     # Print the first 100 releases in the engineer's discography
-    if show_discography && !(artist = discogs.get_artist(CGI.escape(engineer.name))).nil?
-      color_puts "#{artist.aliases} #{artist.aliases} #{artist.namevariations}", color
-      color_puts "#{artist.releases.size} releases in discography", color
-      artist.releases.slice(0,99).each do |disk|
-        color_puts "\t* #{disk.year} #{disk.title} [#{disk.label}]", color
+    releases = get_artist_discog(engineer)
+    if show_discography && !releases.nil?
+      sorted_releases = releases.releases.sort_by {|rel| rel.year.nil? ? 0 : rel.year }.reverse
+      color_puts "Recent releases in discography", color
+      sorted_releases.each do |disk|
+        color_puts "\t* #{disk.year} #{disk.artist} - #{disk.title} [#{disk.role}]", color
       end
       # IDEA: show a cross-section of their work.
       # maybe start with around the year that current album was released if there are many.
@@ -117,8 +114,7 @@ end
 
 artist = ARGV[0]
 album = ARGV[1]
-year = ARGV[2]
-releases = find_releases(artist, album, year)
+releases = find_releases(artist, album)
 raise "No releases" if releases.empty?
 puts "Found #{releases.size} releases"
 
@@ -129,13 +125,13 @@ sorted_releases = releases.inject([]) do |rel_array, release|
   rel_array
 end.sort_by{|arr| arr.last.size}.reverse
 
-raise "No engineering data though :/" if sorted_releases.empty?
+raise "No engineering data :/" if sorted_releases.empty?
 
 best_guess = sorted_releases.shift
-display_release(best_guess.first, best_guess.last, :color => :green, :show_discography => true)
-
-sorted_releases.each do |release, engineers|
-  display_release(release, engineers)
-end
-
+display_release(best_guess.first, best_guess.last, color: :green, show_discography: true)
+#ap best_guess.first
+#sorted_releases.each do |release, engineers|
+ # ap release
+ # display_release(release, engineers)
+#end
 

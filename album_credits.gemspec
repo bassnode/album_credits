@@ -20,5 +20,5 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
 
   s.add_dependency "discogs-wrapper"
-  s.add_development_dependency "ruby-debug"
+  s.add_development_dependency "awesome_print"
 end

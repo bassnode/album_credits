@@ -6,11 +6,10 @@ require 'album_credits'
 # TODO Shove this all in a CLI class or some such.
 artist = ARGV[0]
 album  = ARGV[1]
-year   = ARGV[2]
 ac = AlbumCredits::Finder.new
 
 begin
-  releases = ac.find_releases(artist, album, year)
+  releases = ac.find_releases(artist, album)
 rescue Exception => e
   puts e.message
   exit
