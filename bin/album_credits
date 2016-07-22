@@ -23,12 +23,7 @@ sorted_releases = releases.inject([]) do |rel_array, release|
   rel_array
 end.sort_by{|arr| arr.last.size}.reverse
 
-raise "No engineering data though :/" if sorted_releases.empty?
+raise "No engineering data found." if sorted_releases.empty?
 
 best_guess = sorted_releases.shift
 ac.display_release(best_guess.first, best_guess.last, :color => :green, :show_discography => true)
-
-
-# sorted_releases.each do |release, engineers|
-  # ac.display_release(release, engineers)
-# end

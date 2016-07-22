@@ -13,31 +13,9 @@ module AlbumCredits
       search_result.uri.split('/').last
     end
 
-    # @param [String] the main string to search for
-    # @param [Hash,Optional] params
-    # @option params [String] :format CD, HDCD, vinyl, etc.
-    # @option params [String] :artist
-    # @option params [Fixnum] :year
-    def search(target, params={})
-      sections = []
-      params.each_pair do |key, val|
-        sections << "#{key}:#{val}" if val
-      end
-
-      search_string = "#{target} AND " << sections.join(" AND ")
-      debug "Searching for #{CGI.escape(search_string)}"
-
-      begin
-        discogs.search(CGI.escape(search_string), :type => 'releases')
-      rescue  Discogs::UnknownResource => e
-        debug "Nothing found for #{search_string} #{e}"
-      end
-    end
-
     def find_releases(artist, album)
-
       releases = []
-      possibilities = discogs.search(album, type: 'release', artist: artist, format: 'album')
+      possibilities = discogs.search(album, type: 'release', artist: artist)
 
       if possibilities.pagination.items > 0
         possibilities.results.each do |found_album|
@@ -55,10 +33,10 @@ module AlbumCredits
           end
         end
       else
-        debug "no results for #{artist} #{album} #{year} #{format}"
+        debug "no results for #{artist} #{album}"
       end
 
-      raise AlbumCredits::NoReleasesFound.new(artist, album, year) if releases.empty?
+      raise AlbumCredits::NoReleasesFound.new(artist, album) if releases.empty?
 
       # Sometimes Discogs returns duplicate releases so
       # filter out any duplicates based on id.
@@ -76,14 +54,9 @@ module AlbumCredits
       pristine_releases.size < uniq_releases.size ? pristine_releases : uniq_releases
     end
 
+    # TODO: Look into filtering.
     def engineers_for_release(release)
-      if release.extraartists && !(engineers = release.extraartists.select{|a| a.role =~ /mix|master|engineer/i}).empty?
-        return engineers
-      end
-    end
-
-    def discography_for_artist(artist)
-      discogs.get_artist(CGI.escape(artist)) rescue []
+      release.extraartists
     end
 
     private
